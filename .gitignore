@@ -1,0 +1,12 @@
+# Arquivos e pastas do Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform.lock.hcl
+.main.tf
+
+# Credenciais e arquivos de SO
+*.pem
+*.json
+.DS_Store

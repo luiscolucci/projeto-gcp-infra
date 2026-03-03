@@ -1,0 +1,215 @@
+#As Linhas comentadas com "#" não precisam ser executadas, as mesmas foram deixadas caso haja necessidade apenas
+====================================================================================================================================
+
+PARTE 1: Autenticação e Preparação do Terreno (Google Cloud CLI)
+Antes do Terraform conseguir construir qualquer coisa, o seu terminal precisa provar para o Google quem você é e criar o "terreno" 
+(Projeto) onde a infraestrutura vai nascer.
+
+1. Inicialização e Login do Usuário
+Configura o ambiente local e autentica a sua conta Google no terminal:
+
+gcloud init
+#gcloud auth login
+
+-> Selecionar a opção 2
+-> Insira o nome ex: "infra-corp"
+
+-> Selecione a conta a ser utilizada
+
+-> Selecione a opção 4 "Criar um novo projeto" atribuir um nome ao Projeto ID - Ex: "infra-corp"
+
+#Caso já tenha uma Organização criada no GCP, esses comandos atibuem o Projeto à sua organização.
+
+gcloud organizations list
+
+
+#Retornará essas informações
+DISPLAY_NAME                   ID  DIRECTORY_CUSTOMER_ID
+[Nome da Organização]  xxxxxxxxxxxxx
+
+#Comando para mover de organização
+
+gcloud beta projects move [ID Projeto] --organization="xxxxxxxxxxxxx"
+
+#gcloud projects create [Insira o nome do projeto] --name="[Insira um nome]" --organization="xxxxxxxxxxxxx" #O nome tem que ser único no mundo
+
+# Caso retorne algum erro dizendo que o nome já está sendo utilizado
+
+gcloud projects describe [ID do Projeto] #<- Valida se não há outro projeto com as mesma ID
+
+# Ao concluir, aponte o terminal para o novo projeto
+
+gcloud config set project [ID do Projeto]
+
+# Agora liste as contas de faturamento, necessário para a criação do projeto, não será cobrado na hora
+
+gcloud beta billing accounts list
+
+-> Retorno do comando
+
+ACCOUNT_ID            NAME                        OPEN  MASTER_ACCOUNT_ID
+xxxxxx-xxxxxx-xxxxxx  Minha conta de faturamento  True
+
+gcloud auth application-default set-quota-project [ID Projeto]
+
+gcloud beta billing projects link [ID do Projeto] --billing-account="xxxxxx-xxxxxx-xxxxxx" <- ACCOUNT_ID
+
+#Retorno positivo do comando
+
+billingAccountName: billingAccounts/xxxxxx-xxxxxx-xxxxxx <- ACCOUNT_ID
+billingEnabled: true
+name: projects/[ID Do seu Projeto]/billingInfo
+projectId: [ID Do seu Projeto]
+
+# Ativa as API's
+
+gcloud services enable serviceusage.googleapis.com cloudresourcemanager.googleapis.com --project="ID do Projeto"
+==============================================================================================================================
+#2. Credenciais para Automação (O Passe Livre do Terraform)
+Este é o comando essencial que gera um arquivo de credencial local. 
+É ele que permite ao Terraform assumir a sua identidade para criar recursos sem precisar baixar chaves soltas de Service Accounts:
+
+gcloud auth application-default login
+
+Escolha a conta, se não for utilizar a conta em que está logado no Google e precisar logar em outra, faça o login, pode ser que retorne um erro, no terminal 
+terá um link, copie esse link e cole na barra de pesquisa, realize o logon e concorde e conectar sua conta, se exibir outras informação com caixas 
+de seleção selecione todas as caixas e autorize. Após autenticar-se a porta estará aberta para o Terraform.
+No terminal, vai aparecer uma mensagem dizendo que as credenciais foram salvas em um arquivo .json 
+(geralmente em ~/.config/gcloud/application_default_credentials.json).
+
+#3. Autoriza a credencial local a consumir APIs pagas -> RODE CASO NECESSÁRIO
+
+#gcloud auth application-default set-quota-project [ID DO PROJETO] <- SEM []
+
+
+#4. Força o gcloud a ativar a API base antes do Terraform tentar fazer qualquer coisa. Rode isto no seu terminal por garantia que estarão ativadas:
+
+gcloud services enable cloudresourcemanager.googleapis.com
+
+===============================================================================================================================
+#3. O Deploy (Provisionamento) 
+#Verifique o Arquivo main.tf com atenção e substitua o que estiver indicado removendo os "[]" ou dará erro!!!
+Com a CLI autenticada e o arquivo salvo, a implantação segue o padrão de sempre:
+
+terraform init
+
+terraform apply
+
+Ao aparecer "Enter a value: "
+Digite "yes" e de "enter"
+
+#Demora em média 15 minutos para que o ambiente esteja criado.
+
+=================================================================================================================================
+###Validação e o Projeto está na Organização correta###
+
+gcloud projects describe [ID do Projeto]
+
+=================================================================================================================================
+#Comandos Opcionais Caso necessário#
+
+Opcional: Criar dentro de uma Pasta (Folder)
+Se a sua empresa for muito grande, geralmente os projetos não ficam soltos direto na Organização, mas sim dentro de Pastas (Ex: Pasta "TI", Pasta "Financeiro").
+
+Se você precisar colocar o projeto dentro de uma pasta específica, você primeiro descobre o ID da pasta 
+(gcloud resource-manager folders list --organization="ID_DA_ORG") e depois usa a flag --folder em vez de --organization:
+
+gcloud projects create projeto-gcp-v3-prod --name="Infra Corporativa V3" --folder="ID_DA_PASTA"
+
+=======================================================================================================================================
+#COMANDOS PARA TESTE#
+
+#1. Conexão SSH
+gcloud compute ssh srv-web-01 --zone="us-central1-a"
+
+# Dica,Se você não quiser ficar digitando a zona (--zone="...") toda vez que for logar, você pode configurar o seu terminal para assumir 
+#que a sua zona padrão é sempre a us-central1-a. Caso esteje utilizando outra zona não esqueça de alterar no comando e no main.tf
+
+#Basta rodar este comando uma única vez:
+
+gcloud config set compute/zone us-central1-a
+
+#Depois disso, o seu comando de acesso diário encolhe e vira apenas isso:
+
+gcloud compute ssh srv-web-01
+
+#2. Monitoramento
+
+sudo tail -f /var/log/sre_agent.log
+
+#3. Acesso ao Banco
+
+mysql -u admin -p -h $(cat /etc/db_ip.txt)
+
+# Exibir as Databases
+
+SHOW DATABASES;
+
+# Criar novas
+
+CREATE DATABASE [Nome da Database];
+
+#Se conectar a uma Database
+
+USE app_producao_db; <- DB já criada pelo Terraform
+
+# Ver o que tem dentro da DB
+
+SHOW TABLES;
+
+# Para sair
+
+exit; ou EXIT;
+
+# Criar uma Tabela de Teste
+#Só para garantir que o usuário admin tem permissão de escrita, rode isso no prompt do MySQL:
+#Preste atenção se a BD é a mesma que está definido no "USE ;" localizado na primeira linha, altere de acordo com seu ambiente.
+
+USE app_producao_db; 
+
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(50),
+    email VARCHAR(50)
+);
+
+INSERT INTO usuarios (nome, email) VALUES ('usuario', 'usuario@email.com');
+
+SELECT * FROM usuarios;
+========================================================================================================
+# Teste de indisponibilidade, validação de recebimento de e-mail e SMS
+
+sudo systemctl stop sre-agent
+sudo systemctl stop apache2
+
+Aguarde de 1 a 2 minutos e receberá um e-mail e um SMS
+
+# Restauração do monitoramento
+
+sudo systemctl start sre-agent
+
+#Dica: Verificação de Segurança do GCP (O único momento que pede mouse)
+Para contas novas ou projetos recém-criados, o Google Cloud frequentemente exige que você abra o painel 
+web (Console do GCP > Monitoring > Alerting), clique no seu canal de SMS e insira um código de verificação
+ que eles te mandam na hora, só para provar que aquele celular é realmente seu e não alguém usando o Terraform para fazer SMS-Bombing em terceiros.
+
+========================================================================================================
+
+#Acessar a VM via SSH:
+
+gcloud compute ssh [VERIFIQUE NOME DA INSTANCIA] --zone=[VERIFIQUE A ZONA] # <- VERIFIQUE NO MAIN.TF
+
+# Conecte usando o IP do banco gerado pelo Terraform
+mysql -u admin -p -h [IP_DO_BANCO] app_producao_db # <- VERIFIQUE O NOME ATRIBUÍDO NO MAIN.TF
+
+========================================================================================================
+
+#Destruir Projeto LAB
+
+# Faça logoff da instancia e rode esse comando dentro da pasta do projeto
+
+terraform destroy
+
+#Para excluir do GCP
+
+gcloud projects delete [ID do PROJETO]
