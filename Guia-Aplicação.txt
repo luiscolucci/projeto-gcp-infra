@@ -1,4 +1,7 @@
 #As Linhas comentadas com "#" não precisam ser executadas, as mesmas foram deixadas caso haja necessidade apenas
+#ESSE É UM PASSO A PASSO TESTADO PARA SUBIR DUAS INSTANCIAS NO GCP, UMA VM E UM DATABASE, JÁ ESTÁ CONFIGURADO A VPC INTERNA COM O BANCO E OS ALERTAS
+#QUE MONITORA A CADA 5 SEGUNDOS A SAÚDE DAS MESMAS ALÉM DE MONITORAR O PROVISIONAMENTO, O ARQUIVO "MAIN.TF" ESTÁ COMO BASE NECESSITANDO CONFIGURAR 
+#CONFORME NECESSIDADE. NELE HÁ INDICAÇÕES DE ONTE REALIZAR AS ALTERAÇÕES, ELE CONTÉM 10 BLOCOS DE CONFIGURAÇÃO. 
 ====================================================================================================================================
 
 PARTE 1: Autenticação e Preparação do Terreno (Google Cloud CLI)
