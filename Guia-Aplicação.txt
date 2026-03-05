@@ -216,3 +216,7 @@ terraform destroy
 #Para excluir do GCP
 
 gcloud projects delete [ID do PROJETO]
+
+#Excluindo de forma definitiva CUIDADO COM ESSE COMANDO NÃO HÁ COMO RESTAURAR
+
+gcloud projects list --filter="lifecycleState:DELETE_REQUESTED"
