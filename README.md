@@ -60,5 +60,13 @@ A regra de ouro de Cloud Computing é não deixar recursos ociosos. Para desmont
 
 -> terraform destroy
 
+#Para excluir do GCP
+
+-> gcloud projects delete [ID do PROJETO]
+
+#Excluindo de forma definitiva CUIDADO COM ESSE COMANDO NÃO HÁ COMO RESTAURAR
+
+-> gcloud projects list --filter="lifecycleState:DELETE_REQUESTED"
+
 ---------------------------------------------------------------------------------------------------------------------------------------------------------
 Desenvolvido por Luis Colucci
